@@ -58,7 +58,7 @@ Registration:
 Multishot + Buffer Selection (VALIDATED)
 ------------------------------------------------------------
 
-- prep_recv_multishot (buf=NULL, len=0)
+- prep_recv_multishot (correct usage: len=0 with buffer select)
 - IOSQE_BUFFER_SELECT
 - sqe_set_buf_group
 - IORING_CQE_F_BUFFER
@@ -74,28 +74,29 @@ Validated behaviors:
 
 
 ------------------------------------------------------------
-Batching + CQE Ergonomics (NEW, VALIDATED)
+Batching + CQE Ergonomics (VALIDATED)
 ------------------------------------------------------------
 
-The following helpers exist to reduce boilerplate and enable batching
-WITHOUT introducing runtime behavior.
+These helpers reduce boilerplate and enable batching WITHOUT
+introducing runtime behavior.
 
-Submission:
+Submission helpers:
 
 - sqe_ready_count()
-  → number of SQEs currently prepared but not submitted
+  → number of SQEs prepared but not yet submitted
 
 - submit_and_wait_min($n)
-  → submit pending SQEs and block until at least $n CQEs are available
+  → submit pending SQEs and block until at least $n CQEs exist
 
 
-CQE draining:
+CQE draining helpers:
 
 - reap_one()
   → equivalent to:
      submit_and_wait_min(1)
      peek_cqe
      cqe_seen
+
   → returns:
      ($data, $res, $flags)
 
@@ -104,18 +105,37 @@ CQE draining:
   → wait for at least one CQE
   → drain up to $max CQEs
 
-  → returns a **flat list of triples**:
+  → returns a flat list:
 
      ($data1, $res1, $flags1,
       $data2, $res2, $flags2, ...)
 
 
 Validated behaviors:
-- multiple SQEs can be submitted before a single submit()
+- multiple SQEs can be prepared before a single submit()
 - mixed operation batches (poll + timeout + nop) behave correctly
 - CQEs can be drained incrementally across multiple reap_many() calls
 - user_data correlation remains exact under batching
 - no hidden submission occurs
+
+
+------------------------------------------------------------
+Additional Operations (VALIDATED)
+------------------------------------------------------------
+
+Socket and file operations:
+
+- prep_accept
+- prep_connect
+- prep_close
+- prep_read
+- prep_write
+- prep_recv
+- prep_send
+
+All follow explicit buffer and lifetime rules:
+- Perl scalars used for I/O are retained until completion
+- no implicit buffer management beyond kernel contract
 
 
 ------------------------------------------------------------
@@ -132,11 +152,11 @@ UringXS is intentionally:
 It MUST NOT:
 
 - introduce callbacks
-- introduce objects
 - introduce futures/promises
+- introduce runtime behavior
 - perform implicit submission
 - perform implicit rearming
-- manage request lifetimes beyond kernel semantics
+- manage operation lifetimes beyond kernel semantics
 
 
 ------------------------------------------------------------
@@ -156,7 +176,7 @@ Correct usage is always explicit:
 
   get_sqe → prep → set_data → submit → reap → seen
 
-Helpers do NOT change this model.
+Helpers DO NOT change this model.
 They only reduce boilerplate.
 
 
@@ -178,7 +198,7 @@ Do NOT implement at this layer:
 What This Means
 ------------------------------------------------------------
 
-UringXS is now a **complete and correct substrate**.
+UringXS is now a complete and correct substrate.
 
 The difficult kernel-level work is finished.
 
@@ -188,6 +208,7 @@ The current API supports:
 - explicit completion draining
 - multishot + buffer selection
 - cancellation correctness
+- socket and file I/O primitives
 
 without introducing abstraction.
 
@@ -199,11 +220,11 @@ Future Direction (ABOVE THIS LAYER)
 Future layers may implement:
 
 - proactor runtime
-- operation lifecycle
+- operation lifecycle management
 - connection/socket abstractions
 - scheduling and batching policy
 
-These MUST be built **on top of** UringXS,
+These MUST be built on top of UringXS,
 not inside it.
 
 
