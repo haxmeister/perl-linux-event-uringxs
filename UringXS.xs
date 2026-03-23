@@ -1902,3 +1902,5 @@ Linux::Event authors and contributors.
 =head1 LICENSE
 
 Same terms as Perl itself.
+
+=cut

@@ -1,4 +1,5 @@
 DESIGN-NEXT-LAYER.txt
+devel/uringxs-invariants.md
 eg/benchmark-raw.pl
 lib/Linux/Event/UringXS.pm
 Makefile.PL
@@ -9,5 +10,18 @@ t/01-nop.t
 t/02-socketpair-send-recv.t
 t/03-peek-and-seen.t
 t/04-read-write-pipe.t
-UringXS.xs
+t/05-timeout.t
+t/06-poll.t
 t/07-poll-multishot.t
+t/08-cancel.t
+t/09-link-timeout.t
+t/10-register-files.t
+t/11-provide-buffers-api.t
+t/12-fixed-file-read-write.t
+t/13-fixed-file-update.t
+t/14-provide-remove-buffers-lifecycle.t
+t/15-recv-multishot-buffer-select.t
+t/16-batching-helpers.t
+t/17-mixed-batch-reap-many.t
+t/18-partial-reap-many.t
+UringXS.xs
