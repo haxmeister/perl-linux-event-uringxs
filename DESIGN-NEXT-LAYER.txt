@@ -1,0 +1,110 @@
+Linux::Event::Uring runtime sketch
+==================================
+
+Layering
+--------
+
+1. Linux::Event::UringXS
+   Low-level ring mechanics only.
+
+2. Linux::Event::Uring::Loop
+   Ring ownership, token allocator, CQE drain loop, submission policy.
+
+3. Linux::Event::Uring::OpTable
+   Dense token table implemented as arrays, not blessed op objects.
+
+4. Linux::Event::Uring::Net
+   Socket-oriented helpers built from accept/connect/send/recv/close/cancel.
+
+5. Optional ergonomic layers
+   - Future/promise
+   - Stream/codec
+   - Proactor compatibility shim
+
+Core runtime shape
+------------------
+
+submit:
+  token -> table slot -> prep_* -> sqe_set_data64 -> submit
+
+complete:
+  wait/peek cqe -> token -> table slot -> callback -> cleanup -> cqe_seen
+
+Suggested minimal loop-facing API
+---------------------------------
+
+  my $rt = Linux::Event::Uring::Loop->new(entries => 256);
+
+  my $token = $rt->submit_recv(
+      fd   => $fd,
+      buf  => $buf,
+      len  => $len,
+      cb   => sub ($rt, $token, $res, $flags, $buf) { ... },
+  );
+
+  my $token = $rt->submit_send(...);
+
+  $rt->run_once;
+  $rt->run;
+  $rt->cancel($token);
+
+Internal record shape
+---------------------
+
+Dense array slots keyed by token:
+
+  $live[$token] = [
+      KIND,
+      FD,
+      CB,
+      ARG,
+      BUF,
+      EXTRA,
+  ];
+
+No per-op blessed objects in hot path.
+
+Submission policy
+-----------------
+
+Start simple:
+
+- try get_sqe
+- if full, submit
+- retry get_sqe
+- if still full, drain CQEs then retry
+
+Completion policy
+-----------------
+
+- drain all ready CQEs with peek_cqe
+- optionally block with wait_cqe only when idle
+- keep callback dispatch in Perl direct and short
+- no result hash allocation
+
+Cancellation
+------------
+
+Use prep_cancel64 and target the original token.
+
+Accept/connect
+--------------
+
+- accept returns new fd in cqe res
+- connect takes packed sockaddr scalar
+- higher layer owns socket creation and nonblocking policy
+
+Benchmark plan
+--------------
+
+1. raw nop throughput
+2. raw socketpair send/recv throughput
+3. token-table runtime microbenchmark
+4. echo server benchmark
+5. compare against prior IO::Uring-backed proactor
+
+Milestone after this
+--------------------
+
+Once raw XS benchmarks are acceptable, build Linux::Event::Uring::Loop
+as the first neutral runtime layer.
