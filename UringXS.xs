@@ -950,6 +950,27 @@ CODE:
     le_sqe_clear_buffer_meta(sqe);
     io_uring_prep_close(sqe->sqe, fd);
 
+
+void
+prep_shutdown(self, sqe_sv, fd, how)
+    SV *self
+    SV *sqe_sv
+    int fd
+    int how
+PREINIT:
+    le_ring_t *ring;
+    le_sqe_t *sqe;
+CODE:
+    ring = le_ring_from_sv(self);
+    sqe = le_sqe_from_sv(sqe_sv);
+
+    if (sqe->owner != ring) croak("SQE does not belong to this ring");
+    if (!sqe->sqe) croak("SQE is no longer valid");
+
+    le_sqe_clear_buffer_meta(sqe);
+    io_uring_prep_shutdown(sqe->sqe, fd, how);
+
+
 void
 prep_cancel64(self, sqe_sv, target_data64, flags = 0)
     SV *self

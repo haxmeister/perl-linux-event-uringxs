@@ -3,7 +3,7 @@ use v5.36;
 use strict;
 use warnings;
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 
 require XSLoader;
 XSLoader::load(__PACKAGE__, $VERSION);
@@ -524,6 +524,15 @@ C<pack_sockaddr_un>.
   $ring->prep_close($sqe, $fd);
 
 Prepare a close request for the given file descriptor.
+
+=head2 prep_shutdown
+
+  $ring->prep_shutdown($sqe, $fd, $how);
+
+Prepare a shutdown request for the given socket file descriptor.
+
+C<$how> is passed through unchanged and should usually be one of
+C<SHUT_RD>, C<SHUT_WR>, or C<SHUT_RDWR>.
 
 =head1 REGISTRATION METHODS
 

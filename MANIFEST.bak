@@ -28,3 +28,4 @@ t/19-reap-ready-many.t
 UringXS.xs
 
 t/20-accept-multishot.t
+t/21-shutdown.t
