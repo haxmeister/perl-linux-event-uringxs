@@ -93,6 +93,17 @@ enum {
 #define IORING_CQE_BUFFER_SHIFT 16
 #endif
 
+#ifndef IORING_ACCEPT_MULTISHOT
+#define IORING_ACCEPT_MULTISHOT (1U << 0)
+#endif
+
+static inline void
+le_io_uring_prep_multishot_accept(struct io_uring_sqe *sqe, int fd, struct sockaddr *addr, socklen_t *addrlen, int flags)
+{
+    io_uring_prep_accept(sqe, fd, addr, addrlen, flags);
+    sqe->ioprio |= IORING_ACCEPT_MULTISHOT;
+}
+
 static void
 le_croak_errno(const char *what, int rc)
 {
@@ -877,6 +888,25 @@ CODE:
 
     le_sqe_clear_buffer_meta(sqe);
     io_uring_prep_accept(sqe->sqe, fd, NULL, NULL, flags);
+
+void
+prep_accept_multishot(self, sqe_sv, fd, flags = 0)
+    SV *self
+    SV *sqe_sv
+    int fd
+    int flags
+PREINIT:
+    le_ring_t *ring;
+    le_sqe_t *sqe;
+CODE:
+    ring = le_ring_from_sv(self);
+    sqe = le_sqe_from_sv(sqe_sv);
+
+    if (sqe->owner != ring) croak("SQE does not belong to this ring");
+    if (!sqe->sqe) croak("SQE is no longer valid");
+
+    le_sqe_clear_buffer_meta(sqe);
+    le_io_uring_prep_multishot_accept(sqe->sqe, fd, NULL, NULL, flags);
 
 void
 prep_connect(self, sqe_sv, fd, sockaddr_sv)

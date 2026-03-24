@@ -27,3 +27,4 @@ t/18-partial-reap-many.t
 t/19-reap-ready-many.t
 UringXS.xs
 
+t/20-accept-multishot.t

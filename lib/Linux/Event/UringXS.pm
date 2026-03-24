@@ -3,7 +3,7 @@ use v5.36;
 use strict;
 use warnings;
 
-our $VERSION = '0.002';
+our $VERSION = '0.003';
 
 require XSLoader;
 XSLoader::load(__PACKAGE__, $VERSION);
@@ -493,7 +493,21 @@ This is not a boolean success/failure API.
 
   $ring->prep_accept($sqe, $fd, $flags = 0);
 
-Prepare an accept request on a listening socket.
+Prepare a single-shot accept request on a listening socket.
+
+=head2 prep_accept_multishot
+
+  $ring->prep_accept_multishot($sqe, $fd, $flags = 0);
+
+Prepare a multishot accept request on a listening socket.
+
+Each successful completion returns the newly accepted file descriptor in
+C<res>. The request remains active while CQEs continue to carry
+C<IORING_CQE_F_MORE>; when a completion arrives without that flag, the
+multishot accept is terminal.
+
+This binding uses C<NULL> for C<addr> and C<addrlen>, so it does not
+return peer socket addresses.
 
 =head2 prep_connect
 
