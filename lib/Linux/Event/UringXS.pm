@@ -50,7 +50,7 @@ Batching example:
 
   $ring->submit_and_wait_min(1);
 
-  my @flat = $ring->reap_many(64);
+  my @flat = $ring->reap_ready_many(64);
 
   while (@flat) {
     my ($data, $res, $flags) = splice @flat, 0, 3;
@@ -238,6 +238,51 @@ Mark the current CQE as consumed.
 
 This must be called after a successful C<peek_cqe> or C<wait_cqe> when
 you are done with that CQE.
+
+=head2 reap_one
+
+  my ($data, $res, $flags) = $ring->reap_one;
+
+Blocking batch helper.
+
+Submits pending SQEs, waits until at least one CQE is available, then
+reaps exactly one completion and returns:
+
+  ($data, $res, $flags)
+
+This helper consumes the CQE before returning.
+
+=head2 reap_many
+
+  my @flat = $ring->reap_many($max);
+
+Blocking batch helper.
+
+Submits pending SQEs, waits until at least one CQE is available, then
+reaps up to C<$max> ready completions.
+
+Returns a flat list of triples:
+
+  ($data1, $res1, $flags1, $data2, $res2, $flags2, ...)
+
+This helper consumes each returned CQE before returning.
+
+=head2 reap_ready_many
+
+  my @flat = $ring->reap_ready_many($max);
+
+Nonblocking batch helper.
+
+Reaps up to C<$max> completions that are already ready in the CQ without
+submitting and without waiting.
+
+Returns an empty list if no CQEs are ready.
+
+Returns a flat list of triples:
+
+  ($data1, $res1, $flags1, $data2, $res2, $flags2, ...)
+
+This helper consumes each returned CQE before returning.
 
 =head2 reap_one
 

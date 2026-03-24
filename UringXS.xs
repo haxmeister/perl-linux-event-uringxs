@@ -1217,6 +1217,57 @@ PPCODE:
         count++;
     }
 
+void
+reap_ready_many(self, max)
+    SV *self
+    UV max
+PREINIT:
+    le_ring_t *ring;
+    struct io_uring_cqe *cqe = NULL;
+    UV count = 0;
+    int rc;
+PPCODE:
+    ring = le_ring_from_sv(self);
+
+    if (ring->has_current_cqe) {
+    croak("current CQE has not been marked seen");
+    }
+    if (max == 0) {
+    XSRETURN_EMPTY;
+    }
+    if (max > (UV_MAX / 3)) {
+    croak("reap_ready_many max too large");
+    }
+
+    EXTEND(SP, (I32)(max * 3));
+
+    while (count < max) {
+        UV data64;
+        IV res;
+        UV flags;
+
+        rc = io_uring_peek_cqe(&ring->ring, &cqe);
+        if (rc == -EAGAIN || !cqe) {
+            break;
+        }
+        if (rc < 0) {
+        le_croak_errno("io_uring_peek_cqe", rc);
+        }
+
+        data64 = (UV)cqe->user_data;
+        res = (IV)cqe->res;
+        flags = (UV)cqe->flags;
+
+        le_update_read_buffer(ring, data64, res);
+        le_slot_complete(ring, data64, res);
+        io_uring_cqe_seen(&ring->ring, cqe);
+
+        PUSHs(sv_2mortal(newSVuv(data64)));
+        PUSHs(sv_2mortal(newSViv(res)));
+        PUSHs(sv_2mortal(newSVuv(flags)));
+        count++;
+    }
+
 UV
 sqe_ready_count(self)
     SV *self
